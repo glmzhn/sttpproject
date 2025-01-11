@@ -186,3 +186,6 @@ LOGGING = {
         },
     },
 }
+
+# URL Requests Without '/' in the end will cause HTTP 404 Error
+APPEND_SLASH = False
