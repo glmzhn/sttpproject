@@ -21,7 +21,7 @@ def user(db):
 @pytest.fixture
 def products():
     # Creates a product instance (shampoo) and returns it in a list
-    product1 = Product.objects.create(name='shampoo', price=30, quantity=1)
+    product1 = Product.objects.create(name='shampoo', price=50, quantity=1)
     return [product1]
 
 
@@ -35,9 +35,9 @@ def test_create_order(api_client, user, products):
     data = {
         "user": user.id,  # Pass the user ID
         "status": "pending",
-        "total_price": "30.00",
+        "total_price": "450.00",
         "products": [
-            {"name": "shampoo", "price": "30.00", "quantity": 1}
+            {"name": "shampoo", "price": "35.00", "quantity": 1}
         ]
     }
 
@@ -61,9 +61,9 @@ def test_list_orders(api_client, user, products):
     data = {
         "user": user.id,  # Pass the user ID
         "status": "pending",
-        "total_price": "30.00",
+        "total_price": "400.00",
         "products": [
-            {"name": "shampoo", "price": "30.00", "quantity": 1}
+            {"name": "shampoo", "price": "40.00", "quantity": 1}
         ]
     }
 
@@ -91,7 +91,7 @@ def test_update_order(api_client, user, products):
     order = Order.objects.create(
         user=user,  # Use the user object
         status='pending',
-        total_price='30.00',
+        total_price='40.00',
     )
     order.products.set(products)
 
@@ -125,7 +125,7 @@ def test_delete_order(api_client, user, products):
     order = Order.objects.create(
         user=user,
         status='pending',
-        total_price='30.00',
+        total_price='40.00',
     )
     order.products.set(products)
 
@@ -159,9 +159,9 @@ def test_metrics(api_client, user, products):
     data = {
         "user": user.id,
         "status": "pending",
-        "total_price": "30.00",
+        "total_price": "40.00",
         "products": [
-            {"name": "shampoo", "price": "30.00", "quantity": 1}
+            {"name": "shampoo", "price": "60.00", "quantity": 1}
         ]
     }
     response = api_client.post(url, data, format='json')
@@ -182,9 +182,9 @@ def test_metrics(api_client, user, products):
     # Make an invalid order creation request (missing user)
     invalid_data = {
         "status": "pending",  # Missing user (required)
-        "total_price": "30.00",
+        "total_price": "40.00",
         "products": [
-            {"name": "shampoo", "price": "30.00", "quantity": -1}  # Invalid quantity (negative)
+            {"name": "shampoo", "price": "70.00", "quantity": -1}  # Invalid quantity (negative)
         ]
     }
     response_invalid = api_client.post(url, invalid_data, format='json')
@@ -201,3 +201,76 @@ def test_metrics(api_client, user, products):
     assert metrics_after_error_data != metrics_after_success_data  # Metrics should have changed
     assert metrics_after_error_data['/api/v1/orders/']['total_calls'] == metrics_after_success_data['/api/v1/orders/']['total_calls'] + 1
     assert metrics_after_error_data['/api/v1/orders/']['errors'] == metrics_after_success_data['/api/v1/orders/']['errors'] + 1
+
+
+@pytest.mark.django_db
+def test_filter_orders_by_status(api_client, user, products):
+    # Authenticate the user for the API request
+    api_client.force_authenticate(user=user)
+
+    # Create multiple orders with different statuses
+    Order.objects.create(
+        user=user,
+        status='pending',
+        total_price='40.00',
+    )
+    Order.objects.create(
+        user=user,
+        status='confirmed',
+        total_price='50.00',
+    )
+
+    # Create URL with the filter for the status
+    url = reverse('order-list') + '?status=pending'
+
+    # Perform the GET request with the filter
+    response = api_client.get(url)
+
+    # Check that filtering works and only one order with the correct status is returned
+    assert response.status_code == status.HTTP_200_OK
+    assert len(response.data) == 1
+    assert response.data[0]['status'] == 'pending'
+
+
+@pytest.mark.django_db
+def test_filter_orders_by_price_range(api_client, user, products):
+    # Authenticate the user for the API request
+    api_client.force_authenticate(user=user)
+
+    # Create orders with different total prices
+    Order.objects.create(
+        user=user,
+        status='pending',
+        total_price='30.00',
+    )
+    Order.objects.create(
+        user=user,
+        status='confirmed',
+        total_price='50.00',
+    )
+    Order.objects.create(
+        user=user,
+        status='pending',
+        total_price='70.00',
+    )
+
+    # Test filtering by minimum price
+    url_min = reverse('order-list') + '?min_price=40.00'
+    response_min = api_client.get(url_min)
+    # Check that the response contains only orders with price >= 40.00
+    assert response_min.status_code == status.HTTP_200_OK
+    assert len(response_min.data) == 2  # There should be two orders with price >= 40.00
+
+    # Test filtering by maximum price
+    url_max = reverse('order-list') + '?max_price=50.00'
+    response_max = api_client.get(url_max)
+    # Check that the response contains only orders with price <= 50.00
+    assert response_max.status_code == status.HTTP_200_OK
+    assert len(response_max.data) == 2  # There should be two orders with price <= 50.00
+
+    # Test filtering by price range (min_price and max_price)
+    url_range = reverse('order-list') + '?min_price=40.00&max_price=60.00'
+    response_range = api_client.get(url_range)
+    # Check that the response contains only orders within the price range 40.00 to 60.00
+    assert response_range.status_code == status.HTTP_200_OK
+    assert len(response_range.data) == 1  # There should be one order with price in the range 40.00 to 60.00
