@@ -48,9 +48,6 @@ class OrderViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = super().get_queryset()
 
-        if self.request.user.is_staff:  # Admin Can See All The Orders
-            return queryset
-
         status = self.request.query_params.get('status')
         min_price = self.request.query_params.get('min_price')
         max_price = self.request.query_params.get('max_price')
@@ -61,6 +58,9 @@ class OrderViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(total_price__gte=min_price)
         if max_price:
             queryset = queryset.filter(total_price__lte=max_price)
+
+        if self.request.user.is_staff:  # Admin Can See All The Orders
+            return queryset
 
         return queryset.filter(user=self.request.user)
 
