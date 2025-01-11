@@ -5,5 +5,3 @@ djangorestframework-simplejwt==5.4.0
 django-filter==24.3
 psycopg2==2.9.10
 django-redis==5.4.0
-pytest-django==4.9.0
-pytest==8.3.4

@@ -1,5 +1,4 @@
 import uuid
-from django.contrib.auth.models import User
 from django.db import models
 
 
@@ -23,11 +22,11 @@ class Order(models.Model):
     ]
 
     order_id = models.UUIDField(default=uuid.uuid4, primary_key=True, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
+    customer_name = models.CharField(max_length=255)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     total_price = models.DecimalField(max_digits=10, decimal_places=2)
     products = models.ManyToManyField(Product)
     is_deleted = models.BooleanField(default=False)
 
     def __str__(self):
-        return f"Order {self.order_id} by {self.user.username}"
+        return f"Order {self.order_id}"

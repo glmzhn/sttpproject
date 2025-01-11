@@ -12,15 +12,12 @@ class ProductSerializer(serializers.ModelSerializer):
 
 # ModelSerializer for The Order Model
 class OrderSerializer(serializers.ModelSerializer):
-    products = ProductSerializer(many=True)
-    user = serializers.StringRelatedField()
-
-    # Creating Keys for The Cache
     KEY_PREFIX = 'orders-viewset'
+    products = ProductSerializer(many=True)
 
     class Meta:
         model = Order
-        fields = ['order_id', 'user', 'status', 'total_price', 'products', 'is_deleted']
+        fields = ['order_id', 'customer_name', 'status', 'total_price', 'products', 'is_deleted']
 
     # Processing POST Method
     def create(self, validated_data):
@@ -52,5 +49,7 @@ class OrderSerializer(serializers.ModelSerializer):
                 product, created = Product.objects.get_or_create(**product_data)
                 instance.products.add(product)
 
+        # Deleting Cache
         delete_cache(self.KEY_PREFIX)
+
         return instance
