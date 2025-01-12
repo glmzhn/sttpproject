@@ -31,13 +31,18 @@ class Order(models.Model):
     is_deleted = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
-        if self.pk:
-            old_status = Order.objects.get(pk=self.pk).status
-        else:
+        if not self.order_id:
             old_status = None
+        else:
+            try:
+                old_status = Order.objects.get(order_id=self.order_id).status
+            except Order.DoesNotExist:
+                old_status = None
 
+        # Сохраняем объект заказа
         super().save(*args, **kwargs)
 
+        # Если старый статус существует и отличается от нового, выбрасываем событие
         if old_status and old_status != self.status:
             send_order_status_change_event(
                 order_id=self.order_id,

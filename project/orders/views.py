@@ -68,11 +68,11 @@ class OrderViewSet(viewsets.ModelViewSet):
         # Setting Current User as an Order's Owner
         serializer.save(user=self.request.user)
 
-    def dispatch(self, *args, **kwargs):
-        # Unique Key for Cache Based on User ID
-        self.KEY_PREFIX = f"orders-viewset-{self.request.user.id}"
-        self.list = method_decorator(cache_page(CACHE_TIMEOUT, key_prefix=self.KEY_PREFIX))(self.list)
-        return super().dispatch(*args, **kwargs)
+    # Decorator for Creating the Cache
+    @method_decorator(cache_page(CACHE_TIMEOUT, key_prefix=KEY_PREFIX))
+    # Processing GET Methods
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
 
     # Processing DELETE Methods
     def destroy(self, request, *args, **kwargs):
